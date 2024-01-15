@@ -243,7 +243,7 @@ export default {
                     attrs: {
                       ...this.$attrs,
                     },
-                    key: arrayHasItems(this.pages) ? this.pages[0].key : '',
+                    key: arrayHasItems(this.pages) ? `${this.pages[0].key}${this.pages[0].view === 'weekly' ? this.pages[0].currentWeek : ''}` : '',
                   },
                   panes,
                 ),
@@ -570,11 +570,13 @@ export default {
       if (fromPage.year !== currentPage.year) {
         if (fromPage.year > currentPage.year && currentPage.currentWeek < currentPage.lastWeek) {
           currentPage.currentWeek++;
+          this.transitionName = this.getWeekpageTransition(false);
           return true;
         }
 
         if (fromPage.year < currentPage.year && currentPage.currentWeek > 0) {
           currentPage.currentWeek--;
+          this.transitionName = this.getWeekpageTransition(true);
           return true;
         }
 
@@ -584,12 +586,14 @@ export default {
       const shouldIncrementWeek = fromPage.month > currentPage.month && currentPage.currentWeek < currentPage.lastWeek;
       if (shouldIncrementWeek) {
         currentPage.currentWeek++;
+        this.transitionName = this.getWeekpageTransition(false);
         return true;
       }
 
       const shouldDecrementWeek = fromPage.month < currentPage.month && currentPage.currentWeek > 0;
       if (shouldDecrementWeek) {
         currentPage.currentWeek--;
+        this.transitionName = this.getWeekpageTransition(true);
         return true;
       }
 
@@ -783,6 +787,16 @@ export default {
       }
       // Horizontal slide
       return movePrev ? 'slide-right' : 'slide-left';
+    },
+    getWeekpageTransition(isPrev, transition = this.transition) {
+      if (transition === 'none') return transition;
+
+      // Vertical slide
+      if (transition === 'slide-v') {
+        return isPrev ? 'slide-down' : 'slide-up';
+      }
+      // Horizontal slide
+      return isPrev ? 'slide-right' : 'slide-left';
     },
     getPageForAttributes() {
       let page = null;
