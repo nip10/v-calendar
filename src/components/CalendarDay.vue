@@ -438,7 +438,7 @@ export default {
   min-height: 32px;
   z-index: 1;
   &.is-not-in-month * {
-    opacity: 0;
+    opacity: 0.3;
     pointer-events: none;
   }
 }

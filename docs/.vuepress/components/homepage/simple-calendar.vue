@@ -1,5 +1,24 @@
 <template>
   <div class="section">
+    <div class="bg-gray-400 pt-10 pb-20 rounded-3xl mb-5">
+      <div class="font-medium text-3xl mb-6">Dev test</div>
+      <div>
+        <button
+          class="p-2 bg-blue-100 border border-green hover:bg-green text-green-600 rounded-lg focus:outline-none mb-3"
+          @click="focusDay"
+        >
+          Focus
+        </button>
+        <button
+          class="p-2 bg-blue-100 border border-green hover:bg-green text-green-600 rounded-lg focus:outline-none mb-3"
+          @click="weeklyToggle"
+        >
+          Weekly toggle
+        </button>
+      </div>
+      <v-calendar :view="devWeeklyView ? 'weekly' : 'month'" ref="calendarWeekly" />
+    </div>
+
     <h2>Calendar Attributes</h2>
     <h3>
       Show highlights, dots, bars and custom popovers
@@ -172,6 +191,7 @@ export default {
       incId: 5,
       editId: 0,
       todos: [],
+      devWeeklyView: true,
     };
   },
   computed: {
@@ -424,6 +444,15 @@ export default {
     },
     deleteTodo(todo, updateLayout) {
       this.todos = this.todos.filter(t => t !== todo);
+    },
+    weeklyToggle: async function () {
+      this.devWeeklyView = !this.devWeeklyView;
+      this.focusDay();
+    },
+    focusDay: async function () {
+      const today = new Date();
+      await this.$nextTick();
+      this.$refs.calendarWeekly.move(today, { focusOnDay: { day: 31, month: today.getMonth() + 1, year: today.getFullYear() } });
     },
   },
   directives: {

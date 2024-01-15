@@ -291,6 +291,14 @@ export default {
     attributes: [Object, Array],
     trimWeeks: Boolean,
     disablePageSwipe: Boolean,
+    view: {
+      type: String,
+      default: 'mounth',
+      require: false,
+      validator(value) {
+        return ['mounth', 'weekly'].includes(value);
+      },
+    },
   },
   data() {
     return {
@@ -394,6 +402,10 @@ export default {
         }
       }
     },
+    view() {
+      this.refreshPages({ page: this.pages[0], ignoreCache: true });
+      this.refreshAttrs(this.pages, this.store.list, null, true);
+    },
   },
   created() {
     this.refreshLocale();
@@ -481,6 +493,30 @@ export default {
       }
       // Hide nav popover for good measure
       this.$refs.navPopover.hide({ hideDelay: 0 });
+
+      // Move pages on weekly view
+      const [currentPage] = this.pages;
+
+      if (opts.focusOnDay && currentPage && currentPage.view === 'weekly') {
+        return Promise.all([
+          this.refreshPages({
+            ...opts,
+            page: opts.fromPage,
+            position: 1,
+            force: true,
+          }),
+          this.setCurrentWeekByDay(opts.focusOnDay.day)
+        ]);
+      }
+
+      if (currentPage && !opts.focusOnDay) {
+        const shouldMovePageWeek = this.adjustWeeklyPage(currentPage, opts.fromPage);
+
+        if (shouldMovePageWeek) {
+          this.refreshAttrs(this.pages, this.store.list, null, true);
+          return Promise.resolve(true);
+        }
+      }
       // Move to new `fromPage` if it's different from the current one
       if (opts.fromPage && !pageIsEqualToPage(opts.fromPage, this.firstPage)) {
         return this.refreshPages({
@@ -491,6 +527,71 @@ export default {
         });
       }
       return Promise.resolve(true);
+    },
+    adjustWeeklyPage(currentPage, fromPage) {
+      if (!currentPage || currentPage.view !== 'weekly') {
+        return false;
+      }
+
+      if (fromPage.year !== currentPage.year) {
+        if (fromPage.year > currentPage.year && currentPage.currentWeek < currentPage.lastWeek) {
+          currentPage.currentWeek++;
+          return true;
+        }
+
+        if (fromPage.year < currentPage.year && currentPage.currentWeek > 0) {
+          currentPage.currentWeek--;
+          return true;
+        }
+
+        return false;
+      }
+
+      const shouldIncrementWeek = fromPage.month > currentPage.month && currentPage.currentWeek < currentPage.lastWeek;
+      if (shouldIncrementWeek) {
+        currentPage.currentWeek++;
+        return true;
+      }
+
+      const shouldDecrementWeek = fromPage.month < currentPage.month && currentPage.currentWeek > 0;
+      if (shouldDecrementWeek) {
+        currentPage.currentWeek--;
+        return true;
+      }
+
+      return false;
+    },
+    setCurrentWeekByDay(day) {
+      return new Promise((resolve, reject) => {
+        const currentPage = this.pages[0];
+        const { month } = currentPage;
+
+        const { currentWeek, lastWeek } = currentPage;
+        const weekDay = currentPage.days.find(d => d.day === day && d.month === month);
+
+        if (!weekDay) {
+          reject(new Error('Day not found in current page.'));
+          return;
+        }
+
+        const week = weekDay.week;
+
+        const isSameWeek = week === currentWeek;
+
+        if (isSameWeek) {
+          resolve(false);
+          return;
+        }
+
+        if (week > lastWeek) {
+          currentPage.currentWeek = lastWeek;
+          resolve(true);
+          return;
+        }
+
+        currentPage.currentWeek = week - 1;
+        resolve(true);
+      });
     },
     focusDate(date, opts = {}) {
       // Move to the given date
@@ -671,6 +772,7 @@ export default {
           key,
           month,
           year,
+          view: this.view,
           weeks: this.trimWeeks ? monthComps.weeks : 6,
           title: this.$locale.format(date, this.$locale.masks.title),
           shortMonthLabel: this.$locale.format(date, 'MMM'),
@@ -680,6 +782,7 @@ export default {
           monthComps,
           prevMonthComps,
           nextMonthComps,
+          weekDays: [],
           canMove: pg => this.canMove(pg),
           move: pg => this.move(pg),
           moveThisMonth: () => this.moveThisMonth(),
@@ -689,6 +792,40 @@ export default {
         };
         // Assign day info
         page.days = this.$locale.getCalendarDays(page);
+
+        const pageWeeks = page.days.reduce((acc, day) => {
+          const { weeks, weekIndicesToRetain } = acc;
+          const lastWeekFull = weeks[weeks.length - 1] && weeks[weeks.length - 1].length >= 7;
+
+          if (day.inNextMonth && lastWeekFull) {
+            return acc;
+          }
+
+          if (!weeks[weeks.length - 1] || lastWeekFull) {
+            return {
+              weeks: [...weeks, [day]],
+              weekIndicesToRetain: [...weekIndicesToRetain, false]
+            };
+          }
+
+          return {
+            weeks: [...weeks.slice(0, -1), [...weeks[weeks.length - 1], day]],
+            weekIndicesToRetain: [...weekIndicesToRetain.slice(0, -1), weekIndicesToRetain[weekIndicesToRetain.length - 1] || day.inMonth]
+          };
+        }, { weeks: [], weekIndicesToRetain: [] });
+
+        page.weekDays = pageWeeks.weeks.filter((_, index) => pageWeeks.weekIndicesToRetain[index]);
+
+        page.lastWeek = page.weekDays.length - 1;
+
+        const [currentPage] = this.pages;
+
+        if (currentPage) {
+          const isNewPageLater = page.year > currentPage.year || (page.year === currentPage.year && page.month > currentPage.month);
+          page.currentWeek = isNewPageLater ? 0 : page.lastWeek;
+        } else {
+          page.currentWeek = 0;
+        }
       }
       return page;
     },
