@@ -105,6 +105,7 @@ export default {
         h(CalendarDay, {
           attrs: {
             day,
+            isWeeklyView: this.page.view === 'weekly',
           },
           on: {
             ...this.$listeners,

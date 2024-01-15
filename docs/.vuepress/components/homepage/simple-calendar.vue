@@ -16,7 +16,7 @@
           Weekly toggle
         </button>
       </div>
-      <v-calendar :view="devWeeklyView ? 'weekly' : 'month'" ref="calendarWeekly" />
+      <v-calendar :view="devWeeklyView ? 'weekly' : 'monthly'" ref="calendarWeekly" />
     </div>
 
     <h2>Calendar Attributes</h2>
@@ -452,7 +452,7 @@ export default {
     focusDay: async function () {
       const today = new Date();
       await this.$nextTick();
-      this.$refs.calendarWeekly.move(today, { focusOnDay: { day: 31, month: today.getMonth() + 1, year: today.getFullYear() } });
+      this.$refs.calendarWeekly.move(today, { focusOnDay: { day: 3, month: today.getMonth() + 1, year: today.getFullYear() } });
     },
   },
   directives: {

@@ -293,10 +293,10 @@ export default {
     disablePageSwipe: Boolean,
     view: {
       type: String,
-      default: 'mounth',
+      default: 'monthly',
       require: false,
       validator(value) {
-        return ['mounth', 'weekly'].includes(value);
+        return ['monthly', 'weekly'].includes(value);
       },
     },
   },
@@ -497,26 +497,59 @@ export default {
       // Move pages on weekly view
       const [currentPage] = this.pages;
 
-      if (opts.focusOnDay && currentPage && currentPage.view === 'weekly') {
-        return Promise.all([
-          this.refreshPages({
-            ...opts,
-            page: opts.fromPage,
-            position: 1,
-            force: true,
-          }),
-          this.setCurrentWeekByDay(opts.focusOnDay.day)
-        ]);
-      }
+      if (currentPage && currentPage.view === 'weekly') {
+        if (opts.focusOnDay) {
+          return Promise.all([
+            this.refreshPages({
+              ...opts,
+              page: opts.fromPage,
+              position: 1,
+              force: true,
+            }),
+            this.setCurrentWeekByDay(opts.focusOnDay.day)
+          ]);
+        }
 
-      if (currentPage && !opts.focusOnDay) {
         const shouldMovePageWeek = this.adjustWeeklyPage(currentPage, opts.fromPage);
 
         if (shouldMovePageWeek) {
+          const isFirstWeek = currentPage.currentWeek === 0;
+          const isLastWeek = currentPage.currentWeek === currentPage.lastWeek;
+
+          if (isFirstWeek && !currentPage.weekDays[0][0].inMonth) {
+            const currentDate = {
+              month: currentPage.month,
+              year: currentPage.year
+            };
+
+            const prevMonthDate = {
+              month: currentPage.prevMonthComps.month,
+              year: currentPage.prevMonthComps.year
+            };
+
+            currentPage.title = this.mixedWeekTitle(prevMonthDate, currentDate);
+          }
+
+          if (isLastWeek && !currentPage.weekDays[currentPage.lastWeek][6].inMonth) {
+            const currentDate = {
+              month: currentPage.month,
+              year: currentPage.year
+            };
+
+            const nextMonthDate = {
+              month: currentPage.nextMonthComps.month,
+              year: currentPage.nextMonthComps.year
+            };
+
+            currentPage.title = this.mixedWeekTitle(currentDate, nextMonthDate);
+          }
+
           this.refreshAttrs(this.pages, this.store.list, null, true);
+
           return Promise.resolve(true);
         }
       }
+
       // Move to new `fromPage` if it's different from the current one
       if (opts.fromPage && !pageIsEqualToPage(opts.fromPage, this.firstPage)) {
         return this.refreshPages({
@@ -526,6 +559,7 @@ export default {
           force: true,
         });
       }
+
       return Promise.resolve(true);
     },
     adjustWeeklyPage(currentPage, fromPage) {
@@ -793,41 +827,56 @@ export default {
         // Assign day info
         page.days = this.$locale.getCalendarDays(page);
 
-        const pageWeeks = page.days.reduce((acc, day) => {
-          const { weeks, weekIndicesToRetain } = acc;
-          const lastWeekFull = weeks[weeks.length - 1] && weeks[weeks.length - 1].length >= 7;
+        if (this.view === 'weekly') {
+          const pageWeeks = page.days.reduce((acc, day) => {
+            const { weeks } = acc;
+            const lastWeekFull = weeks[weeks.length - 1] && weeks[weeks.length - 1].length >= 7;
 
-          if (day.inNextMonth && lastWeekFull) {
-            return acc;
-          }
+            if (day.inNextMonth && lastWeekFull) {
+              return acc;
+            }
 
-          if (!weeks[weeks.length - 1] || lastWeekFull) {
+            if (!weeks[weeks.length - 1] || lastWeekFull) {
+              return {
+                weeks: [...weeks, [day]]
+              };
+            }
+
             return {
-              weeks: [...weeks, [day]],
-              weekIndicesToRetain: [...weekIndicesToRetain, false]
+              weeks: [...weeks.slice(0, -1), [...weeks[weeks.length - 1], day]]
             };
+          }, { weeks: [] });
+
+          page.weekDays = pageWeeks.weeks;
+
+          page.lastWeek = page.weekDays.length - 1;
+
+          const [currentPage] = this.pages;
+
+          if (currentPage) {
+            const isFirstWeekdayInNewMonth = page.weekDays[0][0].inMonth ? 0 : 1;
+            const isLastWeekdayInNewMonth = page.weekDays[page.weekDays.length - 1][6].inMonth ? 0 : 1;
+
+            const isNewPageAfterCurrent = page.year > currentPage.year || (page.year === currentPage.year && page.month > currentPage.month);
+            page.currentWeek = isNewPageAfterCurrent ? isFirstWeekdayInNewMonth : page.lastWeek - isLastWeekdayInNewMonth;
+          } else {
+            page.currentWeek = 0;
           }
-
-          return {
-            weeks: [...weeks.slice(0, -1), [...weeks[weeks.length - 1], day]],
-            weekIndicesToRetain: [...weekIndicesToRetain.slice(0, -1), weekIndicesToRetain[weekIndicesToRetain.length - 1] || day.inMonth]
-          };
-        }, { weeks: [], weekIndicesToRetain: [] });
-
-        page.weekDays = pageWeeks.weeks.filter((_, index) => pageWeeks.weekIndicesToRetain[index]);
-
-        page.lastWeek = page.weekDays.length - 1;
-
-        const [currentPage] = this.pages;
-
-        if (currentPage) {
-          const isNewPageLater = page.year > currentPage.year || (page.year === currentPage.year && page.month > currentPage.month);
-          page.currentWeek = isNewPageLater ? 0 : page.lastWeek;
-        } else {
-          page.currentWeek = 0;
         }
       }
+
       return page;
+    },
+    mixedWeekTitle(oldDate, newDate) {
+      const { month: oldMonth, year: oldYear } = oldDate;
+      const { month: newMonth, year: newYear } = newDate;
+
+      const oldTitle = this.$locale.format(new Date(oldYear, oldMonth - 1, 1), 'MMM');
+      const newTitle = this.$locale.format(new Date(newYear, newMonth - 1, 1), 'MMM');
+
+      return oldYear === newYear
+        ? `${oldTitle} - ${newTitle} ${oldYear}`
+        : `${oldTitle} ${oldYear} - ${newTitle} ${newYear}`;
     },
     initStore() {
       // Create a new attribute store
