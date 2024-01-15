@@ -497,7 +497,9 @@ export default {
       // Move pages on weekly view
       const [currentPage] = this.pages;
 
-      if (currentPage && currentPage.view === 'weekly') {
+      const isHeaderNav = arg && typeof arg === 'object' && Object.keys(arg).includes(...['month', 'year']);
+
+      if (!isHeaderNav && currentPage && currentPage.view === 'weekly') {
         if (opts.focusOnDay) {
           return Promise.all([
             this.refreshPages({
@@ -557,6 +559,7 @@ export default {
           page: opts.fromPage,
           position: 1,
           force: true,
+          currentWeek: isHeaderNav ? 0 : null
         });
       }
 
@@ -719,7 +722,7 @@ export default {
       }
       return page;
     },
-    refreshPages({ page, position = 1, force, transition, ignoreCache } = {}) {
+    refreshPages({ page, position = 1, force, transition, ignoreCache, currentWeek } = {}) {
       return new Promise((resolve, reject) => {
         const { fromPage, toPage } = this.getTargetPageRange(page, {
           position,
@@ -728,7 +731,7 @@ export default {
         // Create the new pages
         const pages = [];
         for (let i = 0; i < this.count; i++) {
-          pages.push(this.buildPage(addPages(fromPage, i), ignoreCache));
+          pages.push(this.buildPage({ ...addPages(fromPage, i), ignoreCache, currentWeek }));
         }
         // Refresh disabled days for new pages
         this.refreshDisabledDays(pages);
@@ -808,7 +811,7 @@ export default {
       }
       return page;
     },
-    buildPage({ month, year }, ignoreCache) {
+    buildPage({ month, year, currentWeek }, ignoreCache) {
       const key = `${year.toString()}-${month.toString()}`;
       let page = this.pages.find(p => p.key === key);
       if (!page || ignoreCache) {
@@ -867,7 +870,9 @@ export default {
 
           const [currentPage] = this.pages;
 
-          if (currentPage) {
+          if (typeof currentWeek === 'number') {
+            page.currentWeek = currentWeek;
+          } else if (currentPage) {
             const isFirstWeekdayInNewMonth = page.weekDays[0][0].inMonth ? 0 : 1;
             const isLastWeekdayInNewMonth = page.weekDays[page.weekDays.length - 1][6].inMonth ? 0 : 1;
 
@@ -875,6 +880,20 @@ export default {
             page.currentWeek = isNewPageAfterCurrent ? isFirstWeekdayInNewMonth : page.lastWeek - isLastWeekdayInNewMonth;
           } else {
             page.currentWeek = 0;
+          }
+
+          if (page.currentWeek === 0) {
+            const currentDate = {
+              month: page.month,
+              year: page.year
+            };
+
+            const prevMonthDate = {
+              month: page.prevMonthComps.month,
+              year: page.prevMonthComps.year
+            };
+
+            page.title = this.mixedWeekTitle(prevMonthDate, currentDate);
           }
         }
       }
