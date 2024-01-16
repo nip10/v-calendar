@@ -91,7 +91,10 @@ export default {
     const dayCells = [];
     const { daysInWeek } = this.locale;
 
-    const renderDays = this.page.view !== 'weekly' ? this.page.days : this.page.weekDays[this.page.currentWeek];
+    const renderDays =
+      this.page.view !== 'weekly'
+        ? this.page.days
+        : this.page.weekDays[this.page.currentWeek];
     renderDays.forEach((day, i) => {
       const mod = i % daysInWeek;
       // Insert weeknumber cell on left side if needed
@@ -190,13 +193,8 @@ export default {
       }
     },
     navPopoverEvents() {
-      const {
-        sharedState,
-        navVisibility_,
-        navPlacement,
-        page,
-        position,
-      } = this;
+      const { sharedState, navVisibility_, navPlacement, page, position } =
+        this;
       return getPopoverTriggerEvents({
         id: sharedState.navPopoverId,
         visibility: navVisibility_,

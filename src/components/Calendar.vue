@@ -243,7 +243,13 @@ export default {
                     attrs: {
                       ...this.$attrs,
                     },
-                    key: arrayHasItems(this.pages) ? `${this.pages[0].key}${this.pages[0].view === 'weekly' ? this.pages[0].currentWeek : ''}` : '',
+                    key: arrayHasItems(this.pages)
+                      ? `${this.pages[0].key}${
+                          this.pages[0].view === 'weekly'
+                            ? this.pages[0].currentWeek
+                            : ''
+                        }`
+                      : '',
                   },
                   panes,
                 ),
@@ -497,7 +503,10 @@ export default {
       // Move pages on weekly view
       const [currentPage] = this.pages;
 
-      const isHeaderNav = arg && typeof arg === 'object' && Object.keys(arg).includes(...['month', 'year']);
+      const isHeaderNav =
+        arg &&
+        typeof arg === 'object' &&
+        Object.keys(arg).includes(...['month', 'year']);
 
       if (!isHeaderNav && currentPage && currentPage.view === 'weekly') {
         if (opts.focusOnDay) {
@@ -508,11 +517,14 @@ export default {
               position: 1,
               force: true,
             }),
-            this.setCurrentWeekByDay(opts.focusOnDay.day)
+            this.setCurrentWeekByDay(opts.focusOnDay.day),
           ]);
         }
 
-        const shouldMovePageWeek = this.adjustWeeklyPage(currentPage, opts.fromPage);
+        const shouldMovePageWeek = this.adjustWeeklyPage(
+          currentPage,
+          opts.fromPage,
+        );
 
         if (shouldMovePageWeek) {
           const isFirstWeek = currentPage.currentWeek === 0;
@@ -521,26 +533,29 @@ export default {
           if (isFirstWeek && !currentPage.weekDays[0][0].inMonth) {
             const currentDate = {
               month: currentPage.month,
-              year: currentPage.year
+              year: currentPage.year,
             };
 
             const prevMonthDate = {
               month: currentPage.prevMonthComps.month,
-              year: currentPage.prevMonthComps.year
+              year: currentPage.prevMonthComps.year,
             };
 
             currentPage.title = this.mixedWeekTitle(prevMonthDate, currentDate);
           }
 
-          if (isLastWeek && !currentPage.weekDays[currentPage.lastWeek][6].inMonth) {
+          if (
+            isLastWeek &&
+            !currentPage.weekDays[currentPage.lastWeek][6].inMonth
+          ) {
             const currentDate = {
               month: currentPage.month,
-              year: currentPage.year
+              year: currentPage.year,
             };
 
             const nextMonthDate = {
               month: currentPage.nextMonthComps.month,
-              year: currentPage.nextMonthComps.year
+              year: currentPage.nextMonthComps.year,
             };
 
             currentPage.title = this.mixedWeekTitle(currentDate, nextMonthDate);
@@ -559,7 +574,7 @@ export default {
           page: opts.fromPage,
           position: 1,
           force: true,
-          currentWeek: isHeaderNav ? 0 : null
+          currentWeek: isHeaderNav ? 0 : null,
         });
       }
 
@@ -571,7 +586,10 @@ export default {
       }
 
       if (fromPage.year !== currentPage.year) {
-        if (fromPage.year > currentPage.year && currentPage.currentWeek < currentPage.lastWeek) {
+        if (
+          fromPage.year > currentPage.year &&
+          currentPage.currentWeek < currentPage.lastWeek
+        ) {
           currentPage.currentWeek++;
           this.transitionName = this.getWeekpageTransition(false);
           return true;
@@ -586,14 +604,17 @@ export default {
         return false;
       }
 
-      const shouldIncrementWeek = fromPage.month > currentPage.month && currentPage.currentWeek < currentPage.lastWeek;
+      const shouldIncrementWeek =
+        fromPage.month > currentPage.month &&
+        currentPage.currentWeek < currentPage.lastWeek;
       if (shouldIncrementWeek) {
         currentPage.currentWeek++;
         this.transitionName = this.getWeekpageTransition(false);
         return true;
       }
 
-      const shouldDecrementWeek = fromPage.month < currentPage.month && currentPage.currentWeek > 0;
+      const shouldDecrementWeek =
+        fromPage.month < currentPage.month && currentPage.currentWeek > 0;
       if (shouldDecrementWeek) {
         currentPage.currentWeek--;
         this.transitionName = this.getWeekpageTransition(true);
@@ -608,7 +629,9 @@ export default {
         const { month } = currentPage;
 
         const { currentWeek, lastWeek } = currentPage;
-        const weekDay = currentPage.days.find(d => d.day === day && d.month === month);
+        const weekDay = currentPage.days.find(
+          d => d.day === day && d.month === month,
+        );
 
         if (!weekDay) {
           reject(new Error('Day not found in current page.'));
@@ -722,7 +745,14 @@ export default {
       }
       return page;
     },
-    refreshPages({ page, position = 1, force, transition, ignoreCache, currentWeek } = {}) {
+    refreshPages({
+      page,
+      position = 1,
+      force,
+      transition,
+      ignoreCache,
+      currentWeek,
+    } = {}) {
       return new Promise((resolve, reject) => {
         const { fromPage, toPage } = this.getTargetPageRange(page, {
           position,
@@ -731,7 +761,13 @@ export default {
         // Create the new pages
         const pages = [];
         for (let i = 0; i < this.count; i++) {
-          pages.push(this.buildPage({ ...addPages(fromPage, i), ignoreCache, currentWeek }));
+          pages.push(
+            this.buildPage({
+              ...addPages(fromPage, i),
+              ignoreCache,
+              currentWeek,
+            }),
+          );
         }
         // Refresh disabled days for new pages
         this.refreshDisabledDays(pages);
@@ -845,24 +881,31 @@ export default {
         page.days = this.$locale.getCalendarDays(page);
 
         if (this.view === 'weekly') {
-          const pageWeeks = page.days.reduce((acc, day) => {
-            const { weeks } = acc;
-            const lastWeekFull = weeks[weeks.length - 1] && weeks[weeks.length - 1].length >= 7;
+          const pageWeeks = page.days.reduce(
+            (acc, day) => {
+              const { weeks } = acc;
+              const lastWeekFull =
+                weeks[weeks.length - 1] && weeks[weeks.length - 1].length >= 7;
 
-            if (day.inNextMonth && lastWeekFull) {
-              return acc;
-            }
+              if (day.inNextMonth && lastWeekFull) {
+                return acc;
+              }
 
-            if (!weeks[weeks.length - 1] || lastWeekFull) {
+              if (!weeks[weeks.length - 1] || lastWeekFull) {
+                return {
+                  weeks: [...weeks, [day]],
+                };
+              }
+
               return {
-                weeks: [...weeks, [day]]
+                weeks: [
+                  ...weeks.slice(0, -1),
+                  [...weeks[weeks.length - 1], day],
+                ],
               };
-            }
-
-            return {
-              weeks: [...weeks.slice(0, -1), [...weeks[weeks.length - 1], day]]
-            };
-          }, { weeks: [] });
+            },
+            { weeks: [] },
+          );
 
           page.weekDays = pageWeeks.weeks;
 
@@ -873,11 +916,22 @@ export default {
           if (typeof currentWeek === 'number') {
             page.currentWeek = currentWeek;
           } else if (currentPage) {
-            const isFirstWeekdayInNewMonth = page.weekDays[0][0].inMonth ? 0 : 1;
-            const isLastWeekdayInNewMonth = page.weekDays[page.weekDays.length - 1][6].inMonth ? 0 : 1;
+            const isFirstWeekdayInNewMonth = page.weekDays[0][0].inMonth
+              ? 0
+              : 1;
+            const isLastWeekdayInNewMonth = page.weekDays[
+              page.weekDays.length - 1
+            ][6].inMonth
+              ? 0
+              : 1;
 
-            const isNewPageAfterCurrent = page.year > currentPage.year || (page.year === currentPage.year && page.month > currentPage.month);
-            page.currentWeek = isNewPageAfterCurrent ? isFirstWeekdayInNewMonth : page.lastWeek - isLastWeekdayInNewMonth;
+            const isNewPageAfterCurrent =
+              page.year > currentPage.year ||
+              (page.year === currentPage.year &&
+                page.month > currentPage.month);
+            page.currentWeek = isNewPageAfterCurrent
+              ? isFirstWeekdayInNewMonth
+              : page.lastWeek - isLastWeekdayInNewMonth;
           } else {
             page.currentWeek = 0;
           }
@@ -885,12 +939,12 @@ export default {
           if (page.currentWeek === 0) {
             const currentDate = {
               month: page.month,
-              year: page.year
+              year: page.year,
             };
 
             const prevMonthDate = {
               month: page.prevMonthComps.month,
-              year: page.prevMonthComps.year
+              year: page.prevMonthComps.year,
             };
 
             page.title = this.mixedWeekTitle(prevMonthDate, currentDate);
@@ -904,8 +958,14 @@ export default {
       const { month: oldMonth, year: oldYear } = oldDate;
       const { month: newMonth, year: newYear } = newDate;
 
-      const oldTitle = this.$locale.format(new Date(oldYear, oldMonth - 1, 1), 'MMM');
-      const newTitle = this.$locale.format(new Date(newYear, newMonth - 1, 1), 'MMM');
+      const oldTitle = this.$locale.format(
+        new Date(oldYear, oldMonth - 1, 1),
+        'MMM',
+      );
+      const newTitle = this.$locale.format(
+        new Date(newYear, newMonth - 1, 1),
+        'MMM',
+      );
 
       return oldYear === newYear
         ? `${oldTitle} - ${newTitle} ${oldYear}`
