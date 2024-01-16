@@ -90,9 +90,7 @@ export default {
     // Day cells
     const dayCells = [];
     const { daysInWeek } = this.locale;
-    const renderDays = this.page.view !== 'weekly' ? this.page.days : this.page.weekDays[this.page.currentWeek];
-    console.log('renderDays', renderDays);
-    renderDays.forEach((day, i) => {
+    this.page.days.forEach((day, i) => {
       const mod = i % daysInWeek;
       // Insert weeknumber cell on left side if needed
       if (
@@ -105,7 +103,6 @@ export default {
         h(CalendarDay, {
           attrs: {
             day,
-            isWeeklyView: this.page.view === 'weekly',
           },
           on: {
             ...this.$listeners,

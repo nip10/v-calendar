@@ -112,7 +112,7 @@ export default {
           'vc-day',
           ...this.day.classes,
           { 'vc-day-box-center-center': !this.$scopedSlots['day-content'] },
-          { 'is-not-in-month': !this.inMonth && !this.isWeeklyView },
+          { 'is-not-in-month': !this.inMonth },
         ],
       },
       [backgroundsLayer(), contentLayer(), dotsLayer(), barsLayer()],
@@ -121,7 +121,6 @@ export default {
   inject: ['sharedState'],
   props: {
     day: { type: Object, required: true },
-    isWeeklyView: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -186,7 +185,7 @@ export default {
       let tabindex;
       if (this.day.isFocusable) {
         tabindex = '0';
-      } else if (this.day.inMonth || this.isWeeklyView) {
+      } else if (this.day.inMonth) {
         tabindex = '-1';
       }
       return {
